@@ -1,0 +1,191 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:instance_name",
+ "creation": "2024-01-01 00:00:00.000000",
+ "default_view": "List",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "instance_name",
+  "instance_group",
+  "package",
+  "section_break_4",
+  "hardware_specs",
+  "ram_gb",
+  "cpu_cores",
+  "storage_gb",
+  "column_break_8",
+  "operating_system",
+  "database_type",
+  "section_break_11",
+  "deployment_info",
+  "server_url",
+  "deployment_status",
+  "column_break_15",
+  "deployment_date",
+  "last_backup_date",
+  "section_break_18",
+  "monitoring",
+  "is_active",
+  "notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "instance_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Instance Name",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "instance_group",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Instance Group",
+   "options": "Instance Group",
+   "reqd": 1
+  },
+  {
+   "fieldname": "package",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Package",
+   "options": "Package",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_4",
+   "fieldtype": "Section Break",
+   "label": "Hardware Specifications"
+  },
+  {
+   "fieldname": "hardware_specs",
+   "fieldtype": "Section Break",
+   "label": "Hardware Specs"
+  },
+  {
+   "fieldname": "ram_gb",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "RAM (GB)",
+   "reqd": 1
+  },
+  {
+   "fieldname": "cpu_cores",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "CPU Cores",
+   "reqd": 1
+  },
+  {
+   "fieldname": "storage_gb",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Storage (GB)",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_8",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "operating_system",
+   "fieldtype": "Select",
+   "label": "Operating System",
+   "options": "Ubuntu 20.04\nUbuntu 22.04\nCentOS 7\nCentOS 8\nRHEL 7\nRHEL 8\nDebian 10\nDebian 11"
+  },
+  {
+   "fieldname": "database_type",
+   "fieldtype": "Select",
+   "label": "Database Type",
+   "options": "MariaDB\nMySQL\nPostgreSQL"
+  },
+  {
+   "fieldname": "section_break_11",
+   "fieldtype": "Section Break",
+   "label": "Deployment Information"
+  },
+  {
+   "fieldname": "deployment_info",
+   "fieldtype": "Section Break",
+   "label": "Deployment Info"
+  },
+  {
+   "fieldname": "server_url",
+   "fieldtype": "Data",
+   "label": "Server URL"
+  },
+  {
+   "fieldname": "deployment_status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Deployment Status",
+   "options": "Draft\nDeployed\nRunning\nMaintenance\nStopped\nFailed"
+  },
+  {
+   "fieldname": "column_break_15",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "deployment_date",
+   "fieldtype": "Datetime",
+   "label": "Deployment Date"
+  },
+  {
+   "fieldname": "last_backup_date",
+   "fieldtype": "Datetime",
+   "label": "Last Backup Date"
+  },
+  {
+   "fieldname": "section_break_18",
+   "fieldtype": "Section Break",
+   "label": "Monitoring & Status"
+  },
+  {
+   "fieldname": "monitoring",
+   "fieldtype": "Section Break",
+   "label": "Monitoring"
+  },
+  {
+   "default": "1",
+   "fieldname": "is_active",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Is Active"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Long Text",
+   "label": "Notes"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2024-01-01 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "SaaS Package Management",
+ "name": "Instance",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

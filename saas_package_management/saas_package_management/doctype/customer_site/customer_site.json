@@ -14,6 +14,7 @@
   "site_name",
   "custom_domain",
   "package",
+  "instance",
   "status",
   "column_break_7",
   "creation_date",
@@ -72,6 +73,13 @@
    "label": "Package",
    "options": "Package",
    "reqd": 1
+  },
+  {
+   "fieldname": "instance",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Instance",
+   "options": "Instance"
   },
   {
    "default": "Active",

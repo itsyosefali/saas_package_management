@@ -103,6 +103,10 @@ class CustomerSite(Document):
                 self.expiry_date = add_days(self.creation_date, 365)
             except frappe.DoesNotExistError:
                 pass
+        
+        # Assign available instance if not already assigned
+        if not hasattr(self, 'instance') or not self.instance:
+            self.assign_available_instance()
     
     def before_save(self):
         """Actions before saving the document"""
@@ -189,6 +193,89 @@ class CustomerSite(Document):
                 customer_request.save(ignore_permissions=True)
         except Exception as e:
             frappe.log_error(f"Error updating customer request: {str(e)}", "Customer Request Update Error")
+    
+    def assign_available_instance(self):
+        """Assign an available instance to this customer site"""
+        try:
+            if not self.package:
+                return
+            
+            # Find an available instance for this package
+            available_instances = frappe.get_all(
+                "Instance",
+                filters={
+                    "package": self.package,
+                    "is_active": 1,
+                    "deployment_status": "Running"
+                },
+                fields=["name", "instance_name", "ram_gb", "cpu_cores", "storage_gb"],
+                order_by="creation asc"
+            )
+            
+            if available_instances:
+                # Assign the first available instance
+                instance = available_instances[0]
+                self.instance = instance.name
+                
+                # Update instance status to deployed
+                frappe.db.set_value("Instance", instance.name, "deployment_status", "Deployed")
+                frappe.db.set_value("Instance", instance.name, "server_url", self.custom_domain or f"{self.site_name}.cnitsolution.cloud")
+                
+                # Add instance info to site details
+                instance_info = f"Instance: {instance.instance_name}\nRAM: {instance.ram_gb}GB\nCPU: {instance.cpu_cores} cores\nStorage: {instance.storage_gb}GB"
+                if self.site_details:
+                    self.site_details += f"\n\n{instance_info}"
+                else:
+                    self.site_details = instance_info
+                    
+                frappe.msgprint(f"Assigned instance: {instance.instance_name}")
+            else:
+                frappe.msgprint("No available instances found for this package", alert=True)
+                
+        except Exception as e:
+            frappe.log_error(f"Error assigning instance: {str(e)}", "Instance Assignment Error")
+    
+    def check_site_health(self):
+        """Check if the customer site is running and healthy"""
+        try:
+            if not self.instance:
+                return {"status": "no_instance", "message": "No instance assigned"}
+            
+            instance_doc = frappe.get_doc("Instance", self.instance)
+            
+            # Basic health check - in a real implementation, this would ping the actual site
+            if instance_doc.deployment_status == "Running":
+                return {"status": "healthy", "message": "Site is running normally"}
+            elif instance_doc.deployment_status == "Maintenance":
+                return {"status": "maintenance", "message": "Site is under maintenance"}
+            elif instance_doc.deployment_status == "Stopped":
+                return {"status": "stopped", "message": "Site is stopped"}
+            else:
+                return {"status": "unknown", "message": f"Instance status: {instance_doc.deployment_status}"}
+                
+        except Exception as e:
+            frappe.log_error(f"Error checking site health: {str(e)}", "Site Health Check Error")
+            return {"status": "error", "message": "Error checking site status"}
+    
+    def check_expiry_status(self):
+        """Check if the site is near expiry or expired"""
+        try:
+            if not self.expiry_date:
+                return {"status": "no_expiry", "message": "No expiry date set"}
+            
+            from frappe.utils import getdate, today
+            days_until_expiry = (getdate(self.expiry_date) - getdate(today())).days
+            
+            if days_until_expiry < 0:
+                return {"status": "expired", "message": f"Site expired {abs(days_until_expiry)} days ago"}
+            elif days_until_expiry <= 7:
+                return {"status": "expiring_soon", "message": f"Site expires in {days_until_expiry} days"}
+            else:
+                return {"status": "active", "message": f"Site expires in {days_until_expiry} days"}
+                
+        except Exception as e:
+            frappe.log_error(f"Error checking expiry status: {str(e)}", "Expiry Check Error")
+            return {"status": "error", "message": "Error checking expiry status"}
 
 
 @frappe.whitelist()

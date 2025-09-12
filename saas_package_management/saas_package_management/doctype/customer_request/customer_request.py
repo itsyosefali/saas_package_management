@@ -4,6 +4,7 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.utils import today, add_days, get_datetime
 
 
 class CustomerRequest(Document):
@@ -140,6 +141,9 @@ def create_customer_site(customer_request_name):
 		customer_site.site_name = site_name
 		customer_site.package = customer_request.package
 		customer_site.status = "Active"
+		customer_site.creation_date = get_datetime(today())
+		customer_site.approval_date = get_datetime(today())	
+		customer_site.expiry_date = add_days(get_datetime(today()), 365)  # 1 year from today
 		
 		# Use custom domain from request if provided
 		if customer_request.custom_domain:

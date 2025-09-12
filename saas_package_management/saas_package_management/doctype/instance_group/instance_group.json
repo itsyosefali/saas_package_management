@@ -1,60 +1,43 @@
 {
  "actions": [],
  "allow_rename": 1,
- "autoname": "field:package_name",
+ "autoname": "field:instance_group_name",
  "creation": "2024-01-01 00:00:00.000000",
  "default_view": "List",
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
-  "package_name",
-  "price",
-  "users_limit",
-  "invoices_limit",
-  "expenses_limit",
-  "features",
-  "column_break_6",
+  "instance_group_name",
+  "package",
+  "description",
+  "column_break_3",
   "is_active"
  ],
  "fields": [
   {
-   "fieldname": "package_name",
+   "fieldname": "instance_group_name",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Package Name",
+   "label": "Instance Group Name",
    "reqd": 1,
    "unique": 1
   },
   {
-   "fieldname": "price",
-   "fieldtype": "Currency",
+   "fieldname": "package",
+   "fieldtype": "Link",
    "in_list_view": 1,
-   "label": "Price",
+   "label": "Package",
+   "options": "Package",
    "reqd": 1
   },
   {
-   "fieldname": "users_limit",
-   "fieldtype": "Int",
-   "label": "Users Limit"
-  },
-  {
-   "fieldname": "invoices_limit",
-   "fieldtype": "Int",
-   "label": "Invoices Limit"
-  },
-  {
-   "fieldname": "expenses_limit",
-   "fieldtype": "Int",
-   "label": "Expenses Limit"
-  },
-  {
-   "fieldname": "features",
+   "fieldname": "description",
    "fieldtype": "Long Text",
-   "label": "Features"
+   "label": "Description"
   },
   {
-   "fieldname": "column_break_6",
+   "fieldname": "column_break_3",
    "fieldtype": "Column Break"
   },
   {
@@ -68,19 +51,14 @@
  "links": [
   {
    "group": "Instances",
-   "link_doctype": "Instance Group",
-   "link_fieldname": "package"
-  },
-  {
-   "group": "Instances",
    "link_doctype": "Instance",
-   "link_fieldname": "package"
+   "link_fieldname": "instance_group"
   }
  ],
  "modified": "2024-01-01 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "SaaS Package Management",
- "name": "Package",
+ "name": "Instance Group",
  "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [

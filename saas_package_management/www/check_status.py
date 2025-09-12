@@ -15,6 +15,7 @@ def get_context(context):
     context.request_found = False
     context.error = ""
     
+    
     if frappe.request.method == "POST":
         handle_status_lookup(context)
     
