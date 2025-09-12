@@ -83,7 +83,7 @@ app_license = "mit"
 # ------------
 
 # before_install = "saas_package_management.install.before_install"
-# after_install = "saas_package_management.install.after_install"
+after_install = "saas_package_management.install.after_install"
 
 # Uninstallation
 # ------------
@@ -132,6 +132,44 @@ app_license = "mit"
 # override_doctype_class = {
 # 	"ToDo": "custom_app.overrides.CustomToDo"
 # }
+
+# Website Routes
+# --------------
+website_route_rules = [
+	{"from_route": "/package-request", "to_route": "package-request"},
+	{"from_route": "/check-status", "to_route": "check-status"},
+	{"from_route": "/customer-dashboard", "to_route": "customer-dashboard"},
+	{"from_route": "/admin-dashboard", "to_route": "admin-dashboard"},
+]
+
+# Portal Menu Items
+# -----------------
+portal_menu_items = [
+	{
+		"title": "Package Request",
+		"route": "/package-request",
+		"reference_doctype": "Customer Request",
+		"role": "Customer"
+	},
+	{
+		"title": "Check Status",
+		"route": "/check-status",
+		"reference_doctype": "Customer Request",
+		"role": "Customer"
+	},
+	{
+		"title": "My Requests",
+		"route": "/customer-dashboard",
+		"reference_doctype": "Customer Request",
+		"role": "Customer"
+	},
+	{
+		"title": "Manage Requests",
+		"route": "/admin-dashboard",
+		"reference_doctype": "Customer Request",
+		"role": "System Manager"
+	}
+]
 
 # Document Events
 # ---------------

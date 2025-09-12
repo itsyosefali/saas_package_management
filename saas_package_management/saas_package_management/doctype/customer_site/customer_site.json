@@ -1,0 +1,183 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "naming_series:",
+ "creation": "2024-01-01 00:00:00.000000",
+ "default_view": "List",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "customer_request",
+  "customer_name",
+  "site_name",
+  "custom_domain",
+  "package",
+  "status",
+  "column_break_7",
+  "creation_date",
+  "approval_date",
+  "expiry_date",
+  "section_break_11",
+  "site_details",
+  "server_info",
+  "database_info",
+  "column_break_15",
+  "technical_notes",
+  "admin_notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "options": "CS-.YYYY.-.#####",
+   "reqd": 1
+  },
+  {
+   "fieldname": "customer_request",
+   "fieldtype": "Link",
+   "label": "Customer Request",
+   "options": "Customer Request",
+   "reqd": 1
+  },
+  {
+   "fieldname": "customer_name",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Customer Name",
+   "options": "Customer",
+   "reqd": 1
+  },
+  {
+   "fieldname": "site_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Site Name",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "custom_domain",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Custom Domain",
+   "placeholder": "example.cnitsolution.cloud"
+  },
+  {
+   "fieldname": "package",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Package",
+   "options": "Package",
+   "reqd": 1
+  },
+  {
+   "default": "Active",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Active\nSuspended\nExpired\nCancelled",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_7",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Today",
+   "fieldname": "creation_date",
+   "fieldtype": "Date",
+   "label": "Creation Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "approval_date",
+   "fieldtype": "Date",
+   "label": "Approval Date"
+  },
+  {
+   "fieldname": "expiry_date",
+   "fieldtype": "Date",
+   "label": "Expiry Date"
+  },
+  {
+   "fieldname": "section_break_11",
+   "fieldtype": "Section Break",
+   "label": "Technical Information"
+  },
+  {
+   "fieldname": "site_details",
+   "fieldtype": "Long Text",
+   "label": "Site Details",
+   "options": "Site URL, Admin URL, Login credentials, etc."
+  },
+  {
+   "fieldname": "server_info",
+   "fieldtype": "Long Text",
+   "label": "Server Information",
+   "options": "Server details, hosting information, etc."
+  },
+  {
+   "fieldname": "database_info",
+   "fieldtype": "Long Text",
+   "label": "Database Information",
+   "options": "Database details, connection info, etc."
+  },
+  {
+   "fieldname": "column_break_15",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "technical_notes",
+   "fieldtype": "Long Text",
+   "label": "Technical Notes"
+  },
+  {
+   "fieldname": "admin_notes",
+   "fieldtype": "Long Text",
+   "label": "Admin Notes",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2024-01-01 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "SaaS Package Management",
+ "name": "Customer Site",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 0,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Customer",
+   "share": 1,
+   "write": 0
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

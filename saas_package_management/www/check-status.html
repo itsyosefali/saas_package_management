@@ -1,0 +1,298 @@
+{% extends "templates/web.html" %}
+
+{% block title %}Check Request Status - Ebkar Technology & Management Solutions{% endblock %}
+
+{% block page_content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow">
+                <div class="card-header bg-info text-white">
+                    <h2 class="mb-0 text-center">
+                        <i class="fa fa-search"></i> Check Request Status
+                    </h2>
+                    <p class="text-center mb-0 mt-2">Track your package request status</p>
+                </div>
+                <div class="card-body">
+                    {% if request_found %}
+                        <!-- Request Details Display -->
+                        <div class="alert alert-success">
+                            <h5><i class="fa fa-check-circle"></i> Request Found</h5>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="info-box">
+                                    <h6><i class="fa fa-tag"></i> Request ID</h6>
+                                    <p class="text-primary font-weight-bold">{{ request.name }}</p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="info-box">
+                                    <h6><i class="fa fa-user"></i> Customer</h6>
+                                    <p>{{ request.customer_name }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="info-box">
+                                    <h6><i class="fa fa-cube"></i> Package</h6>
+                                    <p>{{ request.package }}</p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="info-box">
+                                    <h6><i class="fa fa-calendar"></i> Request Date</h6>
+                                    <p>{{ request.request_date }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="info-box">
+                                    <h6><i class="fa fa-info-circle"></i> Status</h6>
+                                    <p>
+                                        <span class="badge badge-{% if request.status == 'Approved' %}success{% elif request.status == 'Rejected' %}danger{% else %}warning{% endif %} badge-lg">
+                                            {{ request.status }}
+                                        </span>
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="info-box">
+                                    <h6><i class="fa fa-clock"></i> Last Updated</h6>
+                                    <p>{{ request.modified }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        {% if request.notes %}
+                        <div class="info-box">
+                            <h6><i class="fa fa-sticky-note"></i> Customer Notes</h6>
+                            <p>{{ request.notes }}</p>
+                        </div>
+                        {% endif %}
+                        
+                        {% if request.admin_notes %}
+                        <div class="info-box">
+                            <h6><i class="fa fa-comment"></i> Admin Notes</h6>
+                            <p>{{ request.admin_notes }}</p>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Status Timeline -->
+                        <div class="mt-4">
+                            <h6><i class="fa fa-history"></i> Status Timeline</h6>
+                            <div class="timeline">
+                                <div class="timeline-item {% if request.status == 'Pending' %}active{% endif %}">
+                                    <div class="timeline-marker bg-warning"></div>
+                                    <div class="timeline-content">
+                                        <h6>Request Submitted</h6>
+                                        <p>{{ request.creation }}</p>
+                                    </div>
+                                </div>
+                                {% if request.status != 'Pending' %}
+                                <div class="timeline-item active">
+                                    <div class="timeline-marker bg-{% if request.status == 'Approved' %}success{% else %}danger{% endif %}"></div>
+                                    <div class="timeline-content">
+                                        <h6>Request {{ request.status }}</h6>
+                                        <p>{{ request.modified }}</p>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="text-center mt-4">
+                            <a href="/check-status" class="btn btn-info">
+                                <i class="fa fa-search"></i> Check Another Request
+                            </a>
+                        </div>
+                        
+                    {% elif error %}
+                        <!-- Error Display -->
+                        <div class="alert alert-danger">
+                            <i class="fa fa-exclamation-triangle"></i> {{ error }}
+                        </div>
+                        
+                        <div class="text-center mt-3">
+                            <a href="/check-status" class="btn btn-primary">
+                                <i class="fa fa-search"></i> Try Again
+                            </a>
+                        </div>
+                        
+                    {% else %}
+                        <!-- Search Form -->
+                        <form method="POST" action="">
+                            <input type="hidden" name="csrf_token" value="{{ frappe.session.csrf_token }}">
+                            
+                            <div class="form-group">
+                                <label for="search_type" class="form-label">Search By</label>
+                                <select class="form-control" id="search_type" name="search_type" required>
+                                    <option value="">Choose search method...</option>
+                                    <option value="request_id" {% if search_type == 'request_id' %}selected{% endif %}>Request ID</option>
+                                    <option value="customer_name" {% if search_type == 'customer_name' %}selected{% endif %}>Customer Name</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="search_value" class="form-label">Enter {% if search_type %}{{ search_type.replace('_', ' ').title() }}{% else %}Search Value{% endif %} *</label>
+                                <input type="text" class="form-control" id="search_value" name="search_value" 
+                                       value="{{ search_value or '' }}" placeholder="Enter {% if search_type %}{{ search_type.replace('_', ' ').lower() }}{% else %}search value{% endif %}" required>
+                            </div>
+                            
+                            <div class="text-center mt-4">
+                                <button type="submit" class="btn btn-info btn-lg">
+                                    <i class="fa fa-search"></i> Check Status
+                                </button>
+                            </div>
+                        </form>
+                        
+                        <!-- Help Section -->
+                        <div class="mt-5">
+                            <div class="alert alert-light">
+                                <h6><i class="fa fa-question-circle"></i> Need Help?</h6>
+                                <ul class="mb-0">
+                                    <li><strong>Request ID:</strong> You can find this in your confirmation email or on your request receipt</li>
+                                    <li><strong>Customer Name:</strong> Enter the exact name you used when submitting the request</li>
+                                    <li>If you can't find your request, please contact our support team</li>
+                                </ul>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.card {
+    border: none;
+    border-radius: 10px;
+}
+
+.card-header {
+    border-radius: 10px 10px 0 0 !important;
+}
+
+.form-control:focus {
+    border-color: #17a2b8;
+    box-shadow: 0 0 0 0.2rem rgba(23, 162, 184, 0.25);
+}
+
+.btn-info {
+    background-color: #17a2b8;
+    border-color: #17a2b8;
+    padding: 12px 30px;
+    border-radius: 25px;
+}
+
+.btn-info:hover {
+    background-color: #138496;
+    border-color: #117a8b;
+    transform: translateY(-2px);
+    transition: all 0.3s ease;
+}
+
+.info-box {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    border-left: 4px solid #17a2b8;
+}
+
+.info-box h6 {
+    color: #17a2b8;
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.info-box p {
+    margin: 0;
+    color: #495057;
+}
+
+.badge-lg {
+    font-size: 1rem;
+    padding: 8px 12px;
+}
+
+.timeline {
+    position: relative;
+    padding-left: 30px;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 20px;
+    opacity: 0.5;
+}
+
+.timeline-item.active {
+    opacity: 1;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: -35px;
+    top: 5px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+
+.timeline-content h6 {
+    margin-bottom: 5px;
+    color: #495057;
+}
+
+.timeline-content p {
+    margin: 0;
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.alert-success {
+    background-color: #d4edda;
+    border-color: #c3e6cb;
+    color: #155724;
+}
+
+.alert-danger {
+    background-color: #f8d7da;
+    border-color: #f5c6cb;
+    color: #721c24;
+}
+
+.alert-light {
+    background-color: #f8f9fa;
+    border-color: #e9ecef;
+    color: #495057;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchType = document.getElementById('search_type');
+    const searchValue = document.getElementById('search_value');
+    const searchLabel = document.querySelector('label[for="search_value"]');
+    
+    if (searchType && searchValue && searchLabel) {
+        searchType.addEventListener('change', function() {
+            const type = this.value;
+            const placeholder = type ? `Enter ${type.replace('_', ' ').toLowerCase()}` : 'Enter search value';
+            const labelText = type ? `Enter ${type.replace('_', ' ').replace('_', ' ')} *` : 'Enter Search Value *';
+            
+            searchValue.placeholder = placeholder;
+            searchLabel.textContent = labelText;
+            searchValue.value = '';
+        });
+    }
+});
+</script>
+{% endblock %}
