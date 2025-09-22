@@ -41,6 +41,21 @@
                                 </div>
                                 <div class="col-md-6">
                                     <div class="form-group">
+                                        <label for="customer_email" class="form-label">Customer Email *</label>
+                                        <input type="email" class="form-control" id="customer_email" name="customer_email" value="{{ customer_email or '' }}" required>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="company_name" class="form-label">Company Name *</label>
+                                        <input type="text" class="form-control" id="company_name" name="company_name" value="{{ company_name or '' }}" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
                                         <label for="package" class="form-label">Select Package *</label>
                                         <select class="form-control" id="package" name="package" required>
                                             <option value="">Choose a package...</option>
@@ -69,6 +84,7 @@
                                     </div>
                                 </div>
                             </div>
+                            
                             
                             <div class="row">
                                 <div class="col-md-12">

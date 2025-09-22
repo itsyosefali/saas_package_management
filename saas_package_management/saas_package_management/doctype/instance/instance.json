@@ -2,16 +2,16 @@
  "actions": [],
  "allow_rename": 1,
  "autoname": "field:instance_name",
- "creation": "2024-01-01 00:00:00.000000",
+ "creation": "2024-01-01 00:00:00",
  "default_view": "List",
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
   "instance_name",
-  "instance_group",
+  "instance_ip",
+  "column_break_musl",
   "package",
-  "section_break_4",
   "hardware_specs",
   "ram_gb",
   "cpu_cores",
@@ -19,17 +19,19 @@
   "column_break_8",
   "operating_system",
   "database_type",
-  "section_break_11",
+  "database_password",
   "deployment_info",
   "server_url",
   "deployment_status",
   "column_break_15",
   "deployment_date",
   "last_backup_date",
-  "section_break_18",
-  "monitoring",
-  "is_active",
-  "notes"
+  "ssh_access_section",
+  "user",
+  "column_break_ebdi",
+  "password",
+  "frappe_info_section",
+  "bench"
  ],
  "fields": [
   {
@@ -41,25 +43,12 @@
    "unique": 1
   },
   {
-   "fieldname": "instance_group",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "label": "Instance Group",
-   "options": "Instance Group",
-   "reqd": 1
-  },
-  {
    "fieldname": "package",
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Package",
    "options": "Package",
    "reqd": 1
-  },
-  {
-   "fieldname": "section_break_4",
-   "fieldtype": "Section Break",
-   "label": "Hardware Specifications"
   },
   {
    "fieldname": "hardware_specs",
@@ -95,18 +84,13 @@
    "fieldname": "operating_system",
    "fieldtype": "Select",
    "label": "Operating System",
-   "options": "Ubuntu 20.04\nUbuntu 22.04\nCentOS 7\nCentOS 8\nRHEL 7\nRHEL 8\nDebian 10\nDebian 11"
+   "options": "Ubuntu 24.04\nUbuntu 22.04"
   },
   {
    "fieldname": "database_type",
    "fieldtype": "Select",
    "label": "Database Type",
    "options": "MariaDB\nMySQL\nPostgreSQL"
-  },
-  {
-   "fieldname": "section_break_11",
-   "fieldtype": "Section Break",
-   "label": "Deployment Information"
   },
   {
    "fieldname": "deployment_info",
@@ -140,33 +124,60 @@
    "label": "Last Backup Date"
   },
   {
-   "fieldname": "section_break_18",
+   "fieldname": "ssh_access_section",
    "fieldtype": "Section Break",
-   "label": "Monitoring & Status"
+   "label": "SSH Access"
   },
   {
-   "fieldname": "monitoring",
+   "fieldname": "user",
+   "fieldtype": "Data",
+   "label": "User",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_ebdi",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "password",
+   "fieldtype": "Password",
+   "label": "Password",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_musl",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "frappe_info_section",
    "fieldtype": "Section Break",
-   "label": "Monitoring"
+   "label": "Frappe Info"
   },
   {
-   "default": "1",
-   "fieldname": "is_active",
-   "fieldtype": "Check",
-   "in_list_view": 1,
-   "label": "Is Active"
+   "fieldname": "bench",
+   "fieldtype": "Link",
+   "label": "Bench",
+   "options": "Bench",
+   "reqd": 1
   },
   {
-   "fieldname": "notes",
-   "fieldtype": "Long Text",
-   "label": "Notes"
+   "fieldname": "instance_ip",
+   "fieldtype": "Data",
+   "label": "Instance IP",
+   "reqd": 1
+  },
+  {
+   "depends_on": "eval:cur_frm.doc.database_type",
+   "fieldname": "database_password",
+   "fieldtype": "Password",
+   "label": "Database Password"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-01-01 00:00:00.000000",
+ "modified": "2025-09-22 09:53:50.191233",
  "modified_by": "Administrator",
- "module": "SaaS Package Management",
+ "module": "Saas Package Management",
  "name": "Instance",
  "naming_rule": "By fieldname",
  "owner": "Administrator",
@@ -184,8 +195,34 @@
    "write": 1
   }
  ],
+ "row_format": "Dynamic",
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": [],
+ "states": [
+  {
+   "color": "Orange",
+   "title": "Running"
+  },
+  {
+   "color": "Red",
+   "title": "Failed"
+  },
+  {
+   "color": "Green",
+   "title": "Deployed"
+  },
+  {
+   "color": "Gray",
+   "title": "Maintenance"
+  },
+  {
+   "color": "Cyan",
+   "title": "Stopped"
+  },
+  {
+   "color": "Blue",
+   "title": "Draft"
+  }
+ ],
  "track_changes": 1
 }

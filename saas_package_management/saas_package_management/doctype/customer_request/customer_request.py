@@ -55,6 +55,20 @@ class CustomerRequest(Document):
 				frappe.msgprint(_("Customer Site already exists for this request"))
 				return
 			
+			# Check if there are available instances for this package
+			available_instances = frappe.get_all(
+				"Instance",
+				filters={
+					"package": self.package,
+					"is_active": 1,
+					"deployment_status": ["in", ["Running", "Deployed"]]
+				},
+				fields=["name"]
+			)
+			
+			if not available_instances:
+				frappe.throw(_("No available instances found for package '{0}'. Please create an instance first or contact administrator.").format(self.package))
+			
 			# Generate site name from customer name
 			customer_name = self.customer_name
 			site_name = customer_name.lower().replace(" ", "-").replace(".", "").replace(",", "").replace("_", "-")
@@ -121,6 +135,23 @@ def create_customer_site(customer_request_name):
 			return {
 				"success": False,
 				"message": "Customer Site already exists for this request"
+			}
+		
+		# Check if there are available instances for this package
+		available_instances = frappe.get_all(
+			"Instance",
+			filters={
+				"package": customer_request.package,
+				"is_active": 1,
+				"deployment_status": ["in", ["Running", "Deployed"]]
+			},
+			fields=["name"]
+		)
+		
+		if not available_instances:
+			return {
+				"success": False,
+				"message": f"No available instances found for package '{customer_request.package}'. Please create an instance first or contact administrator."
 			}
 		
 		# Generate site name from customer name

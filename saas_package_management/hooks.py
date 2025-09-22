@@ -83,7 +83,7 @@ app_license = "mit"
 # ------------
 
 # before_install = "saas_package_management.install.before_install"
-after_install = "saas_package_management.install.after_install"
+# after_install = "saas_package_management.install.after_install"
 
 # Uninstallation
 # ------------

@@ -2,6 +2,10 @@ import frappe
 from frappe import _
 from frappe.utils import today, add_days, get_datetime
 from frappe.model.document import Document
+from datetime import timedelta
+import paramiko
+import json
+import time
 
 
 class CustomerSite(Document):
@@ -206,7 +210,7 @@ class CustomerSite(Document):
                 filters={
                     "package": self.package,
                     "is_active": 1,
-                    "deployment_status": "Running"
+                    "deployment_status": ["in", ["Running", "Deployed"]]
                 },
                 fields=["name", "instance_name", "ram_gb", "cpu_cores", "storage_gb"],
                 order_by="creation asc"
@@ -298,6 +302,7 @@ def create_site_from_request(customer_request_name):
         if existing_sites:
             frappe.throw(_("Customer Site already exists for this request"))
         
+        
         # Generate site name from customer name
         customer_name = customer_request.customer_name
         site_name = customer_name.lower().replace(" ", "-").replace(".", "").replace(",", "")
@@ -322,16 +327,110 @@ def create_site_from_request(customer_request_name):
         # Set default custom domain
         customer_site.custom_domain = f"{site_name}.cnitsolution.cloud"
         
+        # Insert the document first
         customer_site.insert()
+        
+        # Assign available instance after insertion
+        customer_site.assign_available_instance()
+        customer_site.save()
         
         return {
             "success": True,
             "message": f"Customer Site created successfully: {customer_site.name}",
-            "site_name": customer_site.name
+            "site_name": customer_site.name,
+            "instance_assigned": customer_site.instance if customer_site.instance else None
         }
         
     except Exception as e:
         frappe.log_error(f"Error creating site from request: {str(e)}", "Site Creation Error")
+        return {
+            "success": False,
+            "message": str(e)
+        }
+
+
+@frappe.whitelist()
+def test_password_decryption(instance_name):
+    """Test password decryption for an instance"""
+    try:
+        instance_doc = frappe.get_doc("Instance", instance_name)
+        
+        # Test SSH password decryption
+        try:
+            ssh_password = instance_doc.get_password("password")
+            ssh_password_status = "Success" if ssh_password else "Failed - Empty"
+        except Exception as e:
+            ssh_password_status = f"Failed - {str(e)}"
+            ssh_password = None
+        
+        # Test database password decryption
+        try:
+            db_password = instance_doc.get_password("database_password")
+            db_password_status = "Success" if db_password else "Failed - Empty"
+        except Exception as e:
+            db_password_status = f"Failed - {str(e)}"
+            db_password = None
+        
+        return {
+            "success": True,
+            "message": "Password decryption test completed",
+            "details": {
+                "instance_ip": instance_doc.instance_ip,
+                "ssh_user": instance_doc.user,
+                "ssh_password_status": ssh_password_status,
+                "ssh_password_length": len(ssh_password) if ssh_password else 0,
+                "database_password_status": db_password_status,
+                "database_password_length": len(db_password) if db_password else 0
+            }
+        }
+        
+    except Exception as e:
+        frappe.log_error(f"Password decryption test failed: {str(e)}", "Password Test Error")
+        return {
+            "success": False,
+            "message": str(e)
+        }
+
+
+@frappe.whitelist()
+def test_ssh_connection(instance_name):
+    """Test SSH connection to an instance"""
+    try:
+        instance_doc = frappe.get_doc("Instance", instance_name)
+        
+        # Test connection
+        ssh_client = connect_ssh(instance_doc)
+        
+        if ssh_client:
+            # Test basic commands
+            stdin, stdout, stderr = ssh_client.exec_command('whoami')
+            user = stdout.read().decode().strip()
+            
+            stdin, stdout, stderr = ssh_client.exec_command('pwd')
+            current_dir = stdout.read().decode().strip()
+            
+            stdin, stdout, stderr = ssh_client.exec_command('ls -la')
+            ls_output = stdout.read().decode().strip()
+            
+            ssh_client.close()
+            
+            return {
+                "success": True,
+                "message": "SSH connection successful",
+                "details": {
+                    "user": user,
+                    "current_directory": current_dir,
+                    "directory_listing": ls_output[:500] + "..." if len(ls_output) > 500 else ls_output
+                }
+            }
+        else:
+            return {
+                "success": False,
+                "message": "SSH connection failed"
+            }
+            
+    except Exception as e:
+        frappe.log_error(f"SSH test failed: {str(e)}", "SSH Test Error")
         return {
             "success": False,
             "message": str(e)
@@ -367,3 +466,287 @@ def get_site_status(site_name):
             "success": False,
             "message": "Error retrieving site information"
         }
+
+
+@frappe.whitelist()
+def create_site(customer_site):
+    """Create ERPNext site on the instance"""
+    try:
+        # Get customer site document
+        customer_site_doc = frappe.get_doc("Customer Site", customer_site)
+        
+        # Validate required fields
+        if not customer_site_doc.instance:
+            return {"success": False, "message": "Instance not assigned"}
+        
+        if not customer_site_doc.custom_domain:
+            return {"success": False, "message": "Custom domain not specified"}
+        
+        if not customer_site_doc.package:
+            return {"success": False, "message": "Package not specified"}
+        
+        # Get instance information
+        instance_doc = frappe.get_doc("Instance", customer_site_doc.instance)
+        
+        # Get package information for quota configuration
+        package_doc = frappe.get_doc("Package", customer_site_doc.package)
+        
+        # Start site creation as background job
+        frappe.enqueue(
+            'saas_package_management.saas_package_management.doctype.customer_site.customer_site.create_site_background',
+            customer_site=customer_site,
+            instance=instance_doc.name,
+            package=package_doc.name,
+            queue='long',
+            timeout=3600
+        )
+        
+        return {"success": True, "message": "Site creation started"}
+        
+    except Exception as e:
+        frappe.log_error(f"Error starting site creation: {str(e)}", "Site Creation Error")
+        return {"success": False, "message": str(e)}
+
+
+@frappe.whitelist(allow_guest=True)
+def create_site_background(customer_site, instance, package):
+    """Background site creation process"""
+    try:
+        # Get documents
+        customer_site_doc = frappe.get_doc("Customer Site", customer_site)
+        instance_doc = frappe.get_doc("Instance", instance)
+        package_doc = frappe.get_doc("Package", package)
+        
+        # Update status to creating
+        frappe.db.set_value("Customer Site", customer_site_doc.name, "status", "Creating Site")
+        frappe.db.commit()
+        
+        # Connect to instance via SSH
+        frappe.publish_realtime('site_creation_progress', {
+            'progress': 5,
+            'message': f'Connecting to instance {instance_doc.instance_ip}...'
+        })
+        
+        ssh_client = connect_ssh(instance_doc)
+        
+        if not ssh_client:
+            raise Exception("Failed to connect to instance via SSH")
+        
+        # Step 1: Create the site
+        site_name = customer_site_doc.custom_domain  # Use full custom domain as site name
+        
+        # Get decrypted database password
+        try:
+            db_password = instance_doc.get_password("database_password")
+            if not db_password:
+                raise Exception("Database password is not set or could not be decrypted")
+        except Exception as e:
+            raise Exception(f"Failed to get database password: {str(e)}")
+        
+        create_site_command = f"bench new-site {site_name} --db-root-password {db_password} --admin-password adminpass"
+        
+        frappe.publish_realtime('site_creation_progress', {
+            'progress': 10,
+            'message': 'Creating site...'
+        })
+        
+        stdin, stdout, stderr = ssh_client.exec_command(f"cd {instance_doc.bench} && {create_site_command}")
+        
+        # Wait for command to complete
+        exit_status = stdout.channel.recv_exit_status()
+        if exit_status != 0:
+            error_output = stderr.read().decode()
+            raise Exception(f"Site creation failed: {error_output}")
+        
+        frappe.publish_realtime('site_creation_progress', {
+            'progress': 30,
+            'message': 'Site created successfully'
+        })
+        
+        # Step 2: Install ERPNext
+        frappe.publish_realtime('site_creation_progress', {
+            'progress': 40,
+            'message': 'Installing ERPNext...'
+        })
+        
+        install_erpnext_command = f"bench --site {site_name} install-app erpnext"
+        stdin, stdout, stderr = ssh_client.exec_command(f"cd {instance_doc.bench} && {install_erpnext_command}")
+        exit_status = stdout.channel.recv_exit_status()
+        
+        if exit_status != 0:
+            error_output = stderr.read().decode()
+            raise Exception(f"ERPNext installation failed: {error_output}")
+        
+        frappe.publish_realtime('site_creation_progress', {
+            'progress': 60,
+            'message': 'ERPNext installed successfully'
+        })
+        
+        # Step 3: Install erpnext_quota
+        frappe.publish_realtime('site_creation_progress', {
+            'progress': 70,
+            'message': 'Installing erpnext_quota...'
+        })
+        
+        install_quota_command = f"bench --site {site_name} install-app erpnext_quota"
+        stdin, stdout, stderr = ssh_client.exec_command(f"cd {instance_doc.bench} && {install_quota_command}")
+        exit_status = stdout.channel.recv_exit_status()
+        
+        if exit_status != 0:
+            error_output = stderr.read().decode()
+            raise Exception(f"erpnext_quota installation failed: {error_output}")
+        
+        frappe.publish_realtime('site_creation_progress', {
+            'progress': 80,
+            'message': 'erpnext_quota installed successfully'
+        })
+        
+        # Step 4: Configure quota
+        frappe.publish_realtime('site_creation_progress', {
+            'progress': 90,
+            'message': 'Configuring quota limits...'
+        })
+        
+        configure_quota(ssh_client, instance_doc, site_name, package_doc)
+        
+        frappe.publish_realtime('site_creation_progress', {
+            'progress': 100,
+            'message': 'Site creation completed successfully!'
+        })
+        
+        # Update customer site with success information
+        site_details = f"""Site URL: https://{customer_site_doc.custom_domain}
+Admin URL: https://{customer_site_doc.custom_domain}/app
+Login Credentials:
+- Username: Administrator
+- Password: adminpass
+
+Site Name: {site_name}
+Instance: {instance_doc.instance_name}
+Package: {package_doc.package_name}
+Created: {get_datetime().strftime('%B %d, %Y at %I:%M %p')}"""
+        
+        frappe.db.set_value("Customer Site", customer_site_doc.name, "site_details", site_details)
+        frappe.db.set_value("Customer Site", customer_site_doc.name, "status", "Active")
+        frappe.db.commit()
+        
+        ssh_client.close()
+        
+    except Exception as e:
+        frappe.log_error(f"Error in site creation background process: {str(e)}", "Site Creation Background Error")
+        frappe.db.set_value("Customer Site", customer_site, "status", "Failed")
+        frappe.db.set_value("Customer Site", customer_site, "admin_notes", f"Site creation failed: {str(e)}")
+        frappe.db.commit()
+        
+        frappe.publish_realtime('site_creation_progress', {
+            'progress': 0,
+            'message': f'Site creation failed: {str(e)}'
+        })
+
+
+def connect_ssh(instance_doc):
+    """Connect to instance via SSH"""
+    try:
+        # Log connection attempt for debugging
+        frappe.log_error(f"Attempting SSH connection to {instance_doc.instance_ip} with user {instance_doc.user}", "SSH Connection Debug")
+        
+        ssh_client = paramiko.SSHClient()
+        ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        
+        if not instance_doc.instance_ip:
+            raise Exception("Instance IP is not set")
+        if not instance_doc.user:
+            raise Exception("SSH user is not set")
+        
+        try:
+            password = instance_doc.get_password("password")
+            if not password:
+                raise Exception("SSH password is not set or could not be decrypted")
+        except Exception as e:
+            raise Exception(f"Failed to get SSH password: {str(e)}")
+        
+        ssh_client.connect(
+            hostname=instance_doc.instance_ip,
+            username=instance_doc.user,
+            password=password,
+            timeout=30,
+            allow_agent=False,
+            look_for_keys=False
+        )
+       
+        # Test if connection is working
+        stdin, stdout, stderr = ssh_client.exec_command('echo "SSH connection test successful"')
+        test_output = stdout.read().decode().strip()
+        
+        if test_output != "SSH connection test successful":
+            raise Exception("SSH connection test failed")
+        
+        frappe.log_error(f"SSH connection successful to {instance_doc.instance_ip}", "SSH Connection Success")
+        return ssh_client
+        
+    except paramiko.AuthenticationException as e:
+        error_msg = f"SSH Authentication failed for {instance_doc.instance_ip}: {str(e)}"
+        frappe.log_error(error_msg, "SSH Authentication Error")
+        raise Exception(error_msg)
+    except paramiko.SSHException as e:
+        error_msg = f"SSH connection error for {instance_doc.instance_ip}: {str(e)}"
+        frappe.log_error(error_msg, "SSH Connection Error")
+        raise Exception(error_msg)
+    except Exception as e:
+        error_msg = f"SSH connection failed for {instance_doc.instance_ip}: {str(e)}"
+        frappe.log_error(error_msg, "SSH Connection Error")
+        raise Exception(error_msg)
+
+
+def configure_quota(ssh_client, instance_doc, site_name, package_doc):
+    """Configure erpnext_quota based on package limits"""
+    try:
+        # Create quota configuration
+        quota_config = {
+            "active_users": package_doc.users_limit or 5,
+            "company": 2,
+            "document_limit": {
+                "Sales Invoice": {"limit": package_doc.invoices_limit or 10, "period": "Daily"},
+                "Purchase Invoice": {"limit": package_doc.invoices_limit or 10, "period": "Weekly"},
+                "Journal Entry": {"limit": package_doc.invoices_limit or 10, "period": "Monthly"},
+                "Payment Entry": {"limit": package_doc.invoices_limit or 10, "period": "Monthly"}
+            },
+            "valid_till": (get_datetime() + timedelta(days=365)).strftime('%Y-%m-%d')
+        }
+        
+        # Create site_config.json update command
+        config_json = json.dumps(quota_config, indent=2)
+        config_command = f"""
+        cat > /tmp/quota_config.json << 'EOF'
+        {config_json}
+        EOF
+        
+        # Update site_config.json
+        python3 -c "
+        import json
+        import os
+        
+        site_config_path = '{instance_doc.bench}/sites/{site_name}/site_config.json'
+        with open(site_config_path, 'r') as f:
+            config = json.load(f)
+        
+        with open('/tmp/quota_config.json', 'r') as f:
+            quota_config = json.load(f)
+        
+        config['quota'] = quota_config
+        
+        with open(site_config_path, 'w') as f:
+            json.dump(config, f, indent=2)
+        "
+        """
+        
+        stdin, stdout, stderr = ssh_client.exec_command(f"cd {instance_doc.bench} && {config_command}")
+        exit_status = stdout.channel.recv_exit_status()
+        
+        if exit_status != 0:
+            error_output = stderr.read().decode()
+            raise Exception(f"Quota configuration failed: {error_output}")
+        
+    except Exception as e:
+        frappe.log_error(f"Error configuring quota: {str(e)}", "Quota Configuration Error")
+        raise e

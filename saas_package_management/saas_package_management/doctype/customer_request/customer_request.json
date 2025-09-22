@@ -2,7 +2,7 @@
  "actions": [],
  "allow_rename": 1,
  "autoname": "naming_series:",
- "creation": "2024-01-01 00:00:00.000000",
+ "creation": "2024-01-01 00:00:00",
  "default_view": "List",
  "doctype": "DocType",
  "editable_grid": 1,
@@ -10,6 +10,8 @@
  "field_order": [
   "naming_series",
   "customer_name",
+  "customer_email",
+  "company_name",
   "package",
   "request_date",
   "status",
@@ -63,11 +65,11 @@
    "fieldtype": "Column Break"
   },
   {
+   "description": "Enter your desired subdomain (e.g., mycompany for mycompany.cnitsolution.cloud)",
    "fieldname": "custom_domain",
    "fieldtype": "Data",
    "label": "Custom Domain",
-   "placeholder": "mycompany.cnitsolution.cloud",
-   "description": "Enter your desired subdomain (e.g., mycompany for mycompany.cnitsolution.cloud)"
+   "placeholder": "mycompany.cnitsolution.cloud"
   },
   {
    "fieldname": "notes",
@@ -79,13 +81,25 @@
    "fieldtype": "Long Text",
    "label": "Admin Notes",
    "read_only": 1
+  },
+  {
+   "fieldname": "company_name",
+   "fieldtype": "Data",
+   "label": "Company Name",
+   "reqd": 1
+  },
+  {
+   "fieldname": "customer_email",
+   "fieldtype": "Data",
+   "label": "Customer Email",
+   "reqd": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-01-01 00:00:00.000000",
+ "modified": "2025-09-22 09:47:16.917909",
  "modified_by": "Administrator",
- "module": "SaaS Package Management",
+ "module": "Saas Package Management",
  "name": "Customer Request",
  "naming_rule": "By \"Naming Series\" field",
  "owner": "Administrator",
@@ -114,6 +128,7 @@
    "write": 1
   }
  ],
+ "row_format": "Dynamic",
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],

@@ -25,6 +25,8 @@ def handle_form_submission(context):
     try:
         # Get form data
         customer_name = frappe.form_dict.get('customer_name')
+        customer_email = frappe.form_dict.get('customer_email')
+        company_name = frappe.form_dict.get('company_name')
         package = frappe.form_dict.get('package')
         request_date = frappe.form_dict.get('request_date')
         custom_domain = frappe.form_dict.get('custom_domain', '')
@@ -34,6 +36,16 @@ def handle_form_submission(context):
         if not customer_name:
             context.error = "Customer name is required"
             context.customer_name = customer_name
+            context.customer_email = customer_email
+            context.selected_package = package
+            context.request_date = request_date
+            context.notes = notes
+            return
+            
+        if not customer_email:
+            context.error = "Customer email is required"
+            context.customer_name = customer_name
+            context.customer_email = customer_email
             context.selected_package = package
             context.request_date = request_date
             context.notes = notes
@@ -42,6 +54,7 @@ def handle_form_submission(context):
         if not package:
             context.error = "Package selection is required"
             context.customer_name = customer_name
+            context.customer_email = customer_email
             context.selected_package = package
             context.request_date = request_date
             context.notes = notes
@@ -50,6 +63,16 @@ def handle_form_submission(context):
         if not request_date:
             context.error = "Request date is required"
             context.customer_name = customer_name
+            context.customer_email = customer_email
+            context.selected_package = package
+            context.request_date = request_date
+            context.notes = notes
+            return
+        
+        if not company_name:
+            context.error = "Company name is required"
+            context.customer_name = customer_name
+            context.customer_email = customer_email
             context.selected_package = package
             context.request_date = request_date
             context.notes = notes
@@ -61,6 +84,7 @@ def handle_form_submission(context):
             if not package_doc.is_active:
                 context.error = "Selected package is not available"
                 context.customer_name = customer_name
+                context.customer_email = customer_email
                 context.selected_package = package
                 context.request_date = request_date
                 context.notes = notes
@@ -68,6 +92,7 @@ def handle_form_submission(context):
         except frappe.DoesNotExistError:
             context.error = "Selected package does not exist"
             context.customer_name = customer_name
+            context.customer_email = customer_email
             context.selected_package = package
             context.request_date = request_date
             context.notes = notes
@@ -82,6 +107,7 @@ def handle_form_submission(context):
             if not re.match(r'^[a-zA-Z0-9-]+$', custom_domain):
                 context.error = "Custom domain can only contain letters, numbers, and hyphens"
                 context.customer_name = customer_name
+                context.customer_email = customer_email
                 context.selected_package = package
                 context.request_date = request_date
                 context.custom_domain = custom_domain
@@ -91,6 +117,8 @@ def handle_form_submission(context):
         # Create customer request document
         customer_request = frappe.new_doc("Customer Request")
         customer_request.customer_name = customer
+        customer_request.customer_email = customer_email
+        customer_request.company_name = company_name
         customer_request.package = package
         customer_request.request_date = request_date
         customer_request.custom_domain = custom_domain
@@ -110,6 +138,8 @@ def handle_form_submission(context):
         frappe.log_error(f"Error submitting package request: {str(e)}", "Package Request Submit Error")
         context.error = "An error occurred while submitting your request. Please try again."
         context.customer_name = frappe.form_dict.get('customer_name', '')
+        context.customer_email = frappe.form_dict.get('customer_email', '')
+        context.company_name = frappe.form_dict.get('company_name', '')
         context.selected_package = frappe.form_dict.get('package', '')
         context.request_date = frappe.form_dict.get('request_date', '')
         context.custom_domain = frappe.form_dict.get('custom_domain', '')
@@ -185,6 +215,10 @@ def send_admin_notification(customer_request):
                 <tr>
                     <td><strong>Customer:</strong></td>
                     <td>{customer_request.customer_name}</td>
+                </tr>
+                <tr>
+                    <td><strong>Email:</strong></td>
+                    <td>{customer_request.customer_email}</td>
                 </tr>
                 <tr>
                     <td><strong>Package:</strong></td>
