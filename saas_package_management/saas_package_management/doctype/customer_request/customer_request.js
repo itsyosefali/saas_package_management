@@ -167,8 +167,8 @@ function show_domain_preview(frm) {
     
     if (frm.doc.custom_domain) {
         var full_domain = frm.doc.custom_domain;
-        if (!full_domain.endsWith('.cnitsolution.cloud')) {
-            full_domain = full_domain + '.cnitsolution.cloud';
+        if (!full_domain.endsWith('.ibssaas.com')) {
+            full_domain = full_domain + '.ibssaas.com';
         }
         
         var preview_html = `

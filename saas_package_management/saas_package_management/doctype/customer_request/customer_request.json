@@ -65,11 +65,11 @@
    "fieldtype": "Column Break"
   },
   {
-   "description": "Enter your desired subdomain (e.g., mycompany for mycompany.cnitsolution.cloud)",
+   "description": "Enter your desired subdomain (e.g., mycompany for mycompany.ibssaas.com)",
    "fieldname": "custom_domain",
    "fieldtype": "Data",
    "label": "Custom Domain",
-   "placeholder": "mycompany.cnitsolution.cloud"
+   "placeholder": "mycompany.ibssaas.com"
   },
   {
    "fieldname": "notes",

@@ -65,7 +65,7 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Custom Domain",
-   "placeholder": "example.cnitsolution.cloud"
+   "placeholder": "example.ibssaas.com"
   },
   {
    "fieldname": "package",

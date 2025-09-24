@@ -95,11 +95,11 @@
                                                    value="{{ custom_domain or '' }}" placeholder="mycompany" 
                                                    pattern="[a-zA-Z0-9-]+" title="Only letters, numbers, and hyphens allowed">
                                             <div class="input-group-append">
-                                                <span class="input-group-text">.cnitsolution.cloud</span>
+                                                <span class="input-group-text">.ibssaas.com</span>
                                             </div>
                                         </div>
                                         <small class="form-text text-muted">
-                                            Enter your desired subdomain (e.g., "mycompany" for mycompany.cnitsolution.cloud)
+                                            Enter your desired subdomain (e.g., "mycompany" for mycompany.ibssaas.com)
                                         </small>
                                     </div>
                                 </div>
@@ -249,7 +249,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const preview = document.getElementById('domain-preview');
             if (preview) {
                 if (cleanValue) {
-                    preview.textContent = `${cleanValue}.cnitsolution.cloud`;
+                    preview.textContent = `${cleanValue}.ibssaas.com`;
                     preview.style.display = 'block';
                 } else {
                     preview.style.display = 'none';

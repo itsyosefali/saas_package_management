@@ -223,7 +223,7 @@ class CustomerSite(Document):
                 
                 # Update instance status to deployed
                 frappe.db.set_value("Instance", instance.name, "deployment_status", "Deployed")
-                frappe.db.set_value("Instance", instance.name, "server_url", self.custom_domain or f"{self.site_name}.cnitsolution.cloud")
+                frappe.db.set_value("Instance", instance.name, "server_url", self.custom_domain or f"{self.site_name}.ibssaas.com")
                 
                 # Add instance info to site details
                 instance_info = f"Instance: {instance.instance_name}\nRAM: {instance.ram_gb}GB\nCPU: {instance.cpu_cores} cores\nStorage: {instance.storage_gb}GB"
@@ -325,7 +325,7 @@ def create_site_from_request(customer_request_name):
         customer_site.approval_date = today()
         
         # Set default custom domain
-        customer_site.custom_domain = f"{site_name}.cnitsolution.cloud"
+        customer_site.custom_domain = f"{site_name}.ibssaas.com"
         
         # Insert the document first
         customer_site.insert()
@@ -603,11 +603,19 @@ def create_site_background(customer_site, instance, package):
         
         # Step 4: Configure quota
         frappe.publish_realtime('site_creation_progress', {
-            'progress': 90,
+            'progress': 85,
             'message': 'Configuring quota limits...'
         })
         
         configure_quota(ssh_client, instance_doc, site_name, package_doc)
+        
+        # Step 5: Setup SSL with Let's Encrypt
+        frappe.publish_realtime('site_creation_progress', {
+            'progress': 90,
+            'message': 'Setting up SSL certificate...'
+        })
+        
+        setup_ssl_certificate(ssh_client, instance_doc, site_name, customer_site_doc.custom_domain)
         
         frappe.publish_realtime('site_creation_progress', {
             'progress': 100,
@@ -701,42 +709,91 @@ def connect_ssh(instance_doc):
 def configure_quota(ssh_client, instance_doc, site_name, package_doc):
     """Configure erpnext_quota based on package limits"""
     try:
-        # Create quota configuration
+        # Get package limits with proper defaults
+        users_limit = package_doc.users_limit or 5
+        invoices_limit = package_doc.invoices_limit or 10
+        expenses_limit = package_doc.expenses_limit or 10
+        
+        # Create focused quota configuration based on available package limits
         quota_config = {
-            "active_users": package_doc.users_limit or 5,
-            "company": 2,
+            "active_users": users_limit,
+            "company": 2,  # Allow 2 companies by default
             "document_limit": {
-                "Sales Invoice": {"limit": package_doc.invoices_limit or 10, "period": "Daily"},
-                "Purchase Invoice": {"limit": package_doc.invoices_limit or 10, "period": "Weekly"},
-                "Journal Entry": {"limit": package_doc.invoices_limit or 10, "period": "Monthly"},
-                "Payment Entry": {"limit": package_doc.invoices_limit or 10, "period": "Monthly"}
+                # Core Invoice Documents (based on invoices_limit)
+                "Sales Invoice": {"limit": invoices_limit, "period": "Daily"},
+                "Purchase Invoice": {"limit": invoices_limit, "period": "Daily"},
+                
+                # Core Financial Documents (based on invoices_limit)
+                "Journal Entry": {"limit": invoices_limit, "period": "Monthly"},
+                "Payment Entry": {"limit": invoices_limit, "period": "Monthly"},
+                
+                # Expense Documents (based on expenses_limit)
+                "Expense Claim": {"limit": expenses_limit, "period": "Monthly"},
+                "Advance Payment": {"limit": expenses_limit, "period": "Monthly"},
+                
+                # User-related Documents (based on users_limit)
+                "Employee": {"limit": users_limit, "period": "Monthly"},
+                "User": {"limit": users_limit, "period": "Monthly"}
             },
-            "valid_till": (get_datetime() + timedelta(days=365)).strftime('%Y-%m-%d')
+            "valid_till": (get_datetime() + timedelta(days=365)).strftime('%Y-%m-%d'),
+            "package_name": package_doc.package_name,
+            "package_price": package_doc.price or 0,
+            "features": package_doc.features or "Standard ERPNext features"
         }
+        
+        # Log quota configuration for debugging
+        frappe.log_error(f"Configuring quota for site {site_name} with package {package_doc.package_name}: {json.dumps(quota_config, indent=2)}", "Quota Configuration Debug")
         
         # Create site_config.json update command
         config_json = json.dumps(quota_config, indent=2)
         config_command = f"""
+        # Create quota configuration file
         cat > /tmp/quota_config.json << 'EOF'
         {config_json}
         EOF
         
-        # Update site_config.json
+        # Backup existing site_config.json
+        cp '{instance_doc.bench}/sites/{site_name}/site_config.json' '{instance_doc.bench}/sites/{site_name}/site_config.json.backup'
+        
+        # Update site_config.json with quota configuration
         python3 -c "
         import json
         import os
+        import shutil
         
         site_config_path = '{instance_doc.bench}/sites/{site_name}/site_config.json'
+        
+        # Read existing config
         with open(site_config_path, 'r') as f:
             config = json.load(f)
         
+        # Read quota config
         with open('/tmp/quota_config.json', 'r') as f:
             quota_config = json.load(f)
         
+        # Add quota configuration
         config['quota'] = quota_config
         
+        # Write updated config
         with open(site_config_path, 'w') as f:
             json.dump(config, f, indent=2)
+        
+        print('Quota configuration updated successfully')
+        "
+        
+        # Verify the configuration was applied
+        python3 -c "
+        import json
+        site_config_path = '{instance_doc.bench}/sites/{site_name}/site_config.json'
+        with open(site_config_path, 'r') as f:
+            config = json.load(f)
+        if 'quota' in config:
+            print('Quota configuration verified successfully')
+            print(f'Active users limit: {{config[\"quota\"][\"active_users\"]}}')
+            print(f'Document limits configured: {{len(config[\"quota\"][\"document_limit\"])}}')
+        else:
+            print('ERROR: Quota configuration not found')
+            exit(1)
         "
         """
         
@@ -745,8 +802,67 @@ def configure_quota(ssh_client, instance_doc, site_name, package_doc):
         
         if exit_status != 0:
             error_output = stderr.read().decode()
+            frappe.log_error(f"Quota configuration failed: {error_output}", "Quota Configuration Error")
             raise Exception(f"Quota configuration failed: {error_output}")
         
+        # Log success
+        success_output = stdout.read().decode()
+        frappe.log_error(f"Quota configuration successful for {site_name}: {success_output}", "Quota Configuration Success")
+        
     except Exception as e:
-        frappe.log_error(f"Error configuring quota: {str(e)}", "Quota Configuration Error")
+        frappe.log_error(f"Error configuring quota for {site_name}: {str(e)}", "Quota Configuration Error")
         raise e
+
+
+def setup_ssl_certificate(ssh_client, instance_doc, site_name, custom_domain):
+    """Setup SSL certificate using Let's Encrypt"""
+    try:
+        # Log SSL setup attempt
+        frappe.log_error(f"Setting up SSL certificate for {site_name} with domain {custom_domain}", "SSL Setup Debug")
+        
+        # Setup Let's Encrypt SSL certificate
+        ssl_command = f"""
+        # Setup Let's Encrypt SSL certificate
+        sudo -H bench setup lets-encrypt {site_name}
+        
+        # Verify SSL certificate was created
+        if [ -f "/etc/letsencrypt/live/{custom_domain}/fullchain.pem" ]; then
+            echo "SSL certificate created successfully for {custom_domain}"
+        else
+            echo "WARNING: SSL certificate may not have been created properly"
+        fi
+        
+        # Check if nginx is configured for SSL
+        if [ -f "/etc/nginx/sites-available/{site_name}" ]; then
+            echo "Nginx configuration found for {site_name}"
+            # Test nginx configuration
+            sudo nginx -t
+            if [ $? -eq 0 ]; then
+                echo "Nginx configuration is valid"
+                # Reload nginx to apply SSL configuration
+                sudo systemctl reload nginx
+                echo "Nginx reloaded successfully"
+            else
+                echo "ERROR: Nginx configuration is invalid"
+            fi
+        else
+            echo "WARNING: Nginx configuration not found for {site_name}"
+        fi
+        """
+        
+        stdin, stdout, stderr = ssh_client.exec_command(f"cd {instance_doc.bench} && {ssl_command}")
+        exit_status = stdout.channel.recv_exit_status()
+        
+        if exit_status != 0:
+            error_output = stderr.read().decode()
+            frappe.log_error(f"SSL setup failed for {site_name}: {error_output}", "SSL Setup Error")
+            # Don't raise exception as SSL setup failure shouldn't stop site creation
+            frappe.log_error(f"SSL setup failed but continuing with site creation: {error_output}", "SSL Setup Warning")
+        else:
+            success_output = stdout.read().decode()
+            frappe.log_error(f"SSL setup successful for {site_name}: {success_output}", "SSL Setup Success")
+        
+    except Exception as e:
+        frappe.log_error(f"Error setting up SSL certificate for {site_name}: {str(e)}", "SSL Setup Error")
+        # Don't raise exception as SSL setup failure shouldn't stop site creation
+        frappe.log_error(f"SSL setup error but continuing with site creation: {str(e)}", "SSL Setup Warning")
