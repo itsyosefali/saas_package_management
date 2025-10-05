@@ -1,0 +1,179 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:action_name",
+ "creation": "2024-01-01 00:00:00",
+ "default_view": "List",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "action_name",
+  "instance",
+  "column_break_1",
+  "action_type",
+  "status",
+  "section_break_1",
+  "site_actions",
+  "column_break_2",
+  "action_details",
+  "section_break_2",
+  "execution_info",
+  "start_time",
+  "column_break_3",
+  "end_time",
+  "execution_log",
+  "section_break_3",
+  "notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "action_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Action Name",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "instance",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Instance",
+   "options": "Instance",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "action_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Action Type",
+   "options": "Start Instance\nStop Instance\nRestart Instance\nBackup Instance\nRestore Instance\nUpdate Instance\nMonitor Instance\nMaintenance Mode\nSite Management",
+   "reqd": 1
+  },
+  {
+   "default": "Pending",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Pending\nIn Progress\nCompleted\nFailed\nCancelled",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_1",
+   "fieldtype": "Section Break",
+   "label": "Site Actions"
+  },
+  {
+   "fieldname": "site_actions",
+   "fieldtype": "Table",
+   "label": "Site Actions",
+   "options": "Instance Action Site"
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "action_details",
+   "fieldtype": "Long Text",
+   "label": "Action Details",
+   "options": "Detailed description of the action to be performed"
+  },
+  {
+   "fieldname": "section_break_2",
+   "fieldtype": "Section Break",
+   "label": "Execution Information"
+  },
+  {
+   "fieldname": "execution_info",
+   "fieldtype": "Long Text",
+   "label": "Execution Information",
+   "options": "Technical details about the execution process"
+  },
+  {
+   "fieldname": "start_time",
+   "fieldtype": "Datetime",
+   "label": "Start Time"
+  },
+  {
+   "fieldname": "column_break_3",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "end_time",
+   "fieldtype": "Datetime",
+   "label": "End Time"
+  },
+  {
+   "fieldname": "execution_log",
+   "fieldtype": "Long Text",
+   "label": "Execution Log",
+   "options": "Detailed log of the execution process"
+  },
+  {
+   "fieldname": "section_break_3",
+   "fieldtype": "Section Break",
+   "label": "Additional Information"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Long Text",
+   "label": "Notes",
+   "options": "Additional notes and comments"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2024-01-01 00:00:00",
+ "modified_by": "Administrator",
+ "module": "Saas Package Management",
+ "name": "Instance Action",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [
+  {
+   "color": "Blue",
+   "title": "Pending"
+  },
+  {
+   "color": "Orange",
+   "title": "In Progress"
+  },
+  {
+   "color": "Green",
+   "title": "Completed"
+  },
+  {
+   "color": "Red",
+   "title": "Failed"
+  },
+  {
+   "color": "Gray",
+   "title": "Cancelled"
+  }
+ ],
+ "track_changes": 1
+}
