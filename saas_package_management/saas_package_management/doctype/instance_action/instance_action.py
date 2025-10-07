@@ -407,12 +407,11 @@ def save_discovered_sites_to_child_table(action_doc, sites):
 		
 		for site in sites:
 			# Create new child row
-			child_row = action_doc.append('site_actions')
-			
-			# Set site information
-			child_row.site_name = site.get('site_name', 'Unknown')
-			child_row.action = 'Start Site'  # Default action
-			child_row.status = 'Pending'  # Default status
+			child_row = action_doc.append('site_actions', {
+				'site_name': site.get('site_name', 'Unknown'),
+				'action': 'Start Site',  # Default action
+				'status': 'Pending'  # Default status
+			})
 			
 			# Link to Customer Site if exists
 			if site.get('customer_site'):
@@ -422,8 +421,8 @@ def save_discovered_sites_to_child_table(action_doc, sites):
 			if site.get('maintenance_mode'):
 				child_row.status = 'Maintenance Mode Enabled'
 		
-		# Save the document
-		action_doc.save()
+		# Don't save here - let the caller save the document
+		# This prevents issues with nested saves
 		
 	except Exception as e:
 		frappe.log_error(f"Error saving sites to child table: {str(e)}", "Site Actions Save Error")
@@ -499,14 +498,16 @@ def connect_to_server_and_get_sites(instance_doc):
 				
 				# Check site status and handle maintenance mode accordingly
 				site_status = site_info.get('status', 'Unknown')
-				maintenance_mode = False
+				maintenance_mode = 0  # Default to 0 (accessible)
 				
 				if site_status == 'Inactive' or site_status == 'Stopped':
 					# Set maintenance mode to 1 for stopped sites
-					maintenance_mode = set_maintenance_mode_for_site(instance_doc, site_name, True)
+					result = set_maintenance_mode_for_site(instance_doc, site_name, True)
+					maintenance_mode = result if result is not None else 0
 				elif site_status == 'Active' or site_status == 'Running':
 					# Set maintenance mode to 0 for active sites
-					maintenance_mode = set_maintenance_mode_for_site(instance_doc, site_name, False)
+					result = set_maintenance_mode_for_site(instance_doc, site_name, False)
+					maintenance_mode = result if result is not None else 0
 				
 				sites.append({
 					"name": site_name,
@@ -620,32 +621,56 @@ def set_maintenance_mode_for_site(instance_doc, site_name, enable=True):
 		site_config = json.loads(config_output)
 		
 		# Update maintenance mode
-		site_config["maintenance_mode"] = 1 if enable else 0
+		# In Frappe: 1 = maintenance mode enabled (site not accessible), 0 = maintenance mode disabled (site accessible)
+		maintenance_mode_value = 1 if enable else 0
+		site_config["maintenance_mode"] = maintenance_mode_value
 		
-		# Write the updated config back
+		# Write the updated config back using Python heredoc to avoid escaping issues
 		config_json = json.dumps(site_config, indent=2)
-		update_cmd = f"cd {instance_doc.bench} && echo '{config_json}' > sites/{site_name}/site_config.json"
+		# Escape single quotes in JSON for bash
+		config_json_escaped = config_json.replace("'", "'\\''")
+		
+		# Use cat with heredoc instead of echo to avoid escaping issues
+		update_cmd = f"cd {instance_doc.bench} && cat > sites/{site_name}/site_config.json << 'EOF'\n{config_json}\nEOF"
 		execute_server_command(instance_doc, update_cmd)
 		
 		# Log the action
 		action = "enabled" if enable else "disabled"
-		frappe.log_error(f"Maintenance mode {action} for site {site_name}", "Maintenance Mode")
+		frappe.log_error(f"Maintenance mode {action} for site {site_name} (set to {maintenance_mode_value})", "Maintenance Mode")
 		
-		return True
+		# Return the actual maintenance mode value (1 or 0), not just True/False
+		return maintenance_mode_value
 		
 	except Exception as e:
 		frappe.log_error(f"Error setting maintenance mode for {site_name}: {str(e)}", "Maintenance Mode Error")
-		return False
+		return None  # Return None on error to indicate failure
 
 
 @frappe.whitelist()
 def toggle_site_maintenance_mode(instance, site_name, enable=True):
 	"""Toggle maintenance mode for a specific site"""
 	try:
-		instance_doc = frappe.get_doc("Instance", instance)
-		success = set_maintenance_mode_for_site(instance_doc, site_name, enable)
+		# Convert enable to boolean (frappe.whitelist can pass values as strings or integers)
+		frappe.log_error(f"toggle_site_maintenance_mode called with enable={enable}, type={type(enable)}", "Maintenance Mode Debug")
 		
-		if success:
+		if isinstance(enable, str):
+			# Handle string values: 'true', 'True', '1', 'yes' etc.
+			enable = enable.lower() in ['true', '1', 'yes']
+		elif isinstance(enable, int):
+			# Handle integer values: 1 = True, 0 = False
+			enable = bool(enable)
+		else:
+			# Handle actual boolean values
+			enable = bool(enable)
+		
+		frappe.log_error(f"After conversion, enable={enable}, type={type(enable)}", "Maintenance Mode Debug")
+		
+		instance_doc = frappe.get_doc("Instance", instance)
+		maintenance_mode_value = set_maintenance_mode_for_site(instance_doc, site_name, enable)
+		
+		# set_maintenance_mode_for_site returns the maintenance mode value (1 or 0)
+		# Check if it's not None (which would indicate an error)
+		if maintenance_mode_value is not None:
 			action = "enabled" if enable else "disabled"
 			return {
 				"status": "success", 
