@@ -209,7 +209,6 @@ class CustomerSite(Document):
                 "Instance",
                 filters={
                     "package": self.package,
-                    "is_active": 1,
                     "deployment_status": ["in", ["Running", "Deployed"]]
                 },
                 fields=["name", "instance_name", "ram_gb", "cpu_cores", "storage_gb"],
@@ -223,7 +222,7 @@ class CustomerSite(Document):
                 
                 # Update instance status to deployed
                 frappe.db.set_value("Instance", instance.name, "deployment_status", "Deployed")
-                frappe.db.set_value("Instance", instance.name, "server_url", self.custom_domain or f"{self.site_name}.ibssaas.com")
+                frappe.db.set_value("Instance", instance.name, "server_url", self.custom_domain or f"{self.site_name}.easyaidev.com")
                 
                 # Add instance info to site details
                 instance_info = f"Instance: {instance.instance_name}\nRAM: {instance.ram_gb}GB\nCPU: {instance.cpu_cores} cores\nStorage: {instance.storage_gb}GB"
@@ -325,7 +324,7 @@ def create_site_from_request(customer_request_name):
         customer_site.approval_date = today()
         
         # Set default custom domain
-        customer_site.custom_domain = f"{site_name}.ibssaas.com"
+        customer_site.custom_domain = f"{site_name}.easyaidev.com"
         
         # Insert the document first
         customer_site.insert()

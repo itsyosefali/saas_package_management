@@ -17,12 +17,16 @@ def get_context(context):
         "Instance",
         fields=[
             "name", "instance_name", "package", "ram_gb", "cpu_cores", 
-            "storage_gb", "deployment_status", "server_url", "is_active",
+            "storage_gb", "deployment_status", "server_url",
             "deployment_date", "last_backup_date"
         ],
         order_by="creation desc"
     )
     
+    # Calculate derived status
+    for instance in instances:
+        instance.is_active = instance.deployment_status in ["Running", "Deployed", "Maintenance"]
+
     # Get all customer sites with their status
     customer_sites = frappe.get_all(
         "Customer Site",
@@ -105,13 +109,15 @@ def get_instance_status(instance_name):
         
         # In a real implementation, this would ping the actual server
         # For now, we'll return the stored status
+        is_active = instance.deployment_status in ["Running", "Deployed", "Maintenance"]
+        
         return {
             "success": True,
             "data": {
                 "name": instance.name,
                 "instance_name": instance.instance_name,
                 "deployment_status": instance.deployment_status,
-                "is_active": instance.is_active,
+                "is_active": is_active,
                 "server_url": instance.server_url,
                 "last_backup_date": instance.last_backup_date,
                 "ram_gb": instance.ram_gb,
@@ -142,11 +148,12 @@ def get_site_health(site_name):
         instance_status = None
         if site.instance:
             instance = frappe.get_doc("Instance", site.instance)
+            is_active = instance.deployment_status in ["Running", "Deployed", "Maintenance"]
             instance_status = {
                 "name": instance.name,
                 "instance_name": instance.instance_name,
                 "deployment_status": instance.deployment_status,
-                "is_active": instance.is_active
+                "is_active": is_active
             }
         
         # Check expiry status

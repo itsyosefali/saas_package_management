@@ -99,7 +99,7 @@ def handle_form_submission(context):
             return
         
         # Check if customer exists, if not create a basic customer record
-        customer = get_or_create_customer(customer_name)
+        customer = get_or_create_customer(customer_name, customer_email, company_name)
         
         # Validate custom domain format if provided
         if custom_domain:
@@ -161,7 +161,7 @@ def get_active_packages():
         return []
 
 
-def get_or_create_customer(customer_name):
+def get_or_create_customer(customer_name, customer_email, company_name):
     """Get existing customer or create a basic customer record"""
     try:
         # Try to find existing customer by name
@@ -177,7 +177,14 @@ def get_or_create_customer(customer_name):
         # Create new customer if not found
         customer = frappe.new_doc("Customer")
         customer.customer_name = customer_name
-        customer.customer_type = "Individual"
+        
+        if company_name:
+            customer.customer_type = "Company"
+            # If company name is provided, use it for customer name to be clearer? 
+            # But request says "customer name take it and save it", so sticking to customer_name
+        else:
+            customer.customer_type = "Individual"
+            
         customer.customer_group = "All Customer Groups"
         customer.territory = "All Territories"
         customer.insert(ignore_permissions=True)

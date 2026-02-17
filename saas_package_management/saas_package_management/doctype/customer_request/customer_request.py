@@ -60,7 +60,6 @@ class CustomerRequest(Document):
 				"Instance",
 				filters={
 					"package": self.package,
-					"is_active": 1,
 					"deployment_status": ["in", ["Running", "Deployed"]]
 				},
 				fields=["name"]
@@ -90,13 +89,13 @@ class CustomerRequest(Document):
 			
 			# Use custom domain from request if provided, otherwise generate default
 			if self.custom_domain:
-				# If custom domain is provided, append .ibssaas.com if not already present
-				if not self.custom_domain.endswith('.ibssaas.com'):
-					customer_site.custom_domain = f"{self.custom_domain}.ibssaas.com"
+				# If custom domain is provided, append .easyaidev.com if not already present
+				if not self.custom_domain.endswith('.easyaidev.com'):
+					customer_site.custom_domain = f"{self.custom_domain}.easyaidev.com"
 				else:
 					customer_site.custom_domain = self.custom_domain
 			else:
-				customer_site.custom_domain = f"{site_name}.ibssaas.com"
+				customer_site.custom_domain = f"{site_name}.easyaidev.com"
 			
 			customer_site.insert()
 			customer_site.submit()
@@ -142,7 +141,6 @@ def create_customer_site(customer_request_name):
 			"Instance",
 			filters={
 				"package": customer_request.package,
-				"is_active": 1,
 				"deployment_status": ["in", ["Running", "Deployed"]]
 			},
 			fields=["name"]
@@ -178,12 +176,12 @@ def create_customer_site(customer_request_name):
 		
 		# Use custom domain from request if provided
 		if customer_request.custom_domain:
-			if not customer_request.custom_domain.endswith('.ibssaas.com'):
-				customer_site.custom_domain = f"{customer_request.custom_domain}.ibssaas.com"
+			if not customer_request.custom_domain.endswith('.easyaidev.com'):
+				customer_site.custom_domain = f"{customer_request.custom_domain}.easyaidev.com"
 			else:
 				customer_site.custom_domain = customer_request.custom_domain
 		else:
-			customer_site.custom_domain = f"{site_name}.ibssaas.com"
+			customer_site.custom_domain = f"{site_name}.easyaidev.com"
 		
 		customer_site.insert()
 		customer_site.submit()
