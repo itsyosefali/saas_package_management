@@ -1,5 +1,6 @@
 [
  {
+  "name": "Ultimate",
   "doctype": "Package",
   "package_name": "Ultimate",
   "price": 500.0,
@@ -10,6 +11,7 @@
   "is_active": 1
  },
  {
+  "name": "Standard",
   "doctype": "Package",
   "package_name": "Standard",
   "price": 100.0,
@@ -20,6 +22,7 @@
   "is_active": 1
  },
  {
+  "name": "Professional",
   "doctype": "Package",
   "package_name": "Professional",
   "price": 200.0,
@@ -30,6 +33,7 @@
   "is_active": 1
  },
  {
+  "name": "Premium",
   "doctype": "Package",
   "package_name": "Premium",
   "price": 300.0,
@@ -40,6 +44,7 @@
   "is_active": 1
  },
  {
+  "name": "Elite",
   "doctype": "Package",
   "package_name": "Elite",
   "price": 400.0,
