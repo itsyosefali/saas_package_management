@@ -3,17 +3,22 @@ import frappe.sessions
 from frappe import _
 from frappe.utils import today, now
 
+# Prevent caching to ensure fresh CSRF tokens
+no_cache = 1
+
 
 def get_context(context):
     """Get context for package request page"""
     context.title = "Package Request"
     context.packages = get_active_packages()
     context.today = today()
-    # CSRF token for form submissions
+    
+    # CSRF token for form submissions - commit to ensure it's saved in production
     context.csrf_token = frappe.sessions.get_csrf_token()
+    frappe.db.commit()  # nosemgrep - required for CSRF token persistence in production
     
     # Add meta information
-    context.meta_description = "Request a package from Ebkar Technology & Management Solutions"
+    context.meta_description = "Request a package from Easy AI Dev"
     context.meta_keywords = "package request, SaaS, ERP, business solutions"
     
     # Handle POST request (form submission)
@@ -25,60 +30,50 @@ def get_context(context):
 
 def handle_form_submission(context):
     """Handle form submission via POST"""
+    # Helper function to preserve form data for error display
+    def preserve_form_data():
+        context.customer_name = frappe.form_dict.get('customer_name', '')
+        context.customer_email = frappe.form_dict.get('customer_email', '')
+        context.company_name = frappe.form_dict.get('company_name', '')
+        context.selected_package = frappe.form_dict.get('package', '')
+        context.request_date = frappe.form_dict.get('request_date', '')
+        context.custom_domain = frappe.form_dict.get('custom_domain', '')
+        context.notes = frappe.form_dict.get('notes', '')
+    
     try:
         # Get form data
-        customer_name = frappe.form_dict.get('customer_name')
-        customer_email = frappe.form_dict.get('customer_email')
-        company_name = frappe.form_dict.get('company_name')
-        package = frappe.form_dict.get('package')
-        request_date = frappe.form_dict.get('request_date')
-        custom_domain = frappe.form_dict.get('custom_domain', '')
-        notes = frappe.form_dict.get('notes', '')
+        customer_name = frappe.form_dict.get('customer_name', '').strip()
+        customer_email = frappe.form_dict.get('customer_email', '').strip()
+        company_name = frappe.form_dict.get('company_name', '').strip()
+        package = frappe.form_dict.get('package', '').strip()
+        request_date = frappe.form_dict.get('request_date', '').strip()
+        custom_domain = frappe.form_dict.get('custom_domain', '').strip()
+        notes = frappe.form_dict.get('notes', '').strip()
         
         # Validate required fields
         if not customer_name:
             context.error = "Customer name is required"
-            context.customer_name = customer_name
-            context.customer_email = customer_email
-            context.selected_package = package
-            context.request_date = request_date
-            context.notes = notes
+            preserve_form_data()
             return
             
         if not customer_email:
             context.error = "Customer email is required"
-            context.customer_name = customer_name
-            context.customer_email = customer_email
-            context.selected_package = package
-            context.request_date = request_date
-            context.notes = notes
+            preserve_form_data()
             return
             
         if not package:
             context.error = "Package selection is required"
-            context.customer_name = customer_name
-            context.customer_email = customer_email
-            context.selected_package = package
-            context.request_date = request_date
-            context.notes = notes
+            preserve_form_data()
             return
             
         if not request_date:
             context.error = "Request date is required"
-            context.customer_name = customer_name
-            context.customer_email = customer_email
-            context.selected_package = package
-            context.request_date = request_date
-            context.notes = notes
+            preserve_form_data()
             return
         
         if not company_name:
             context.error = "Company name is required"
-            context.customer_name = customer_name
-            context.customer_email = customer_email
-            context.selected_package = package
-            context.request_date = request_date
-            context.notes = notes
+            preserve_form_data()
             return
         
         # Validate package exists and is active
@@ -86,19 +81,11 @@ def handle_form_submission(context):
             package_doc = frappe.get_doc("Package", package)
             if not package_doc.is_active:
                 context.error = "Selected package is not available"
-                context.customer_name = customer_name
-                context.customer_email = customer_email
-                context.selected_package = package
-                context.request_date = request_date
-                context.notes = notes
+                preserve_form_data()
                 return
         except frappe.DoesNotExistError:
             context.error = "Selected package does not exist"
-            context.customer_name = customer_name
-            context.customer_email = customer_email
-            context.selected_package = package
-            context.request_date = request_date
-            context.notes = notes
+            preserve_form_data()
             return
         
         # Check if customer exists, if not create a basic customer record
@@ -109,12 +96,7 @@ def handle_form_submission(context):
             import re
             if not re.match(r'^[a-zA-Z0-9-]+$', custom_domain):
                 context.error = "Custom domain can only contain letters, numbers, and hyphens"
-                context.customer_name = customer_name
-                context.customer_email = customer_email
-                context.selected_package = package
-                context.request_date = request_date
-                context.custom_domain = custom_domain
-                context.notes = notes
+                preserve_form_data()
                 return
         
         # Create customer request document
@@ -130,6 +112,9 @@ def handle_form_submission(context):
         customer_request.admin_notes = f"Request submitted via web form on {now()}"
         customer_request.insert(ignore_permissions=True)
         
+        # Commit the transaction to ensure it's saved in production
+        frappe.db.commit()
+        
         # Send notification email to admin (optional)
         send_admin_notification(customer_request)
         
@@ -137,16 +122,33 @@ def handle_form_submission(context):
         context.submitted = True
         context.request_id = customer_request.name
         
+    except frappe.CSRFTokenError:
+        # CSRF token validation failed
+        frappe.log_error(
+            f"CSRF token validation failed. Session: {frappe.session.user}, "
+            f"Token in form: {frappe.form_dict.get('csrf_token', 'missing')}, "
+            f"Session token: {getattr(frappe.session.data, 'csrf_token', 'missing')}",
+            "Package Request CSRF Error"
+        )
+        context.error = "Security validation failed. Please refresh the page and try again."
+        preserve_form_data()
+    except frappe.PermissionError as e:
+        # Permission error
+        frappe.log_error(
+            f"Permission error submitting package request: {str(e)}\n{frappe.get_traceback()}",
+            "Package Request Permission Error"
+        )
+        context.error = "You don't have permission to submit this request. Please contact support."
+        preserve_form_data()
     except Exception as e:
-        frappe.log_error(f"Error submitting package request: {str(e)}", "Package Request Submit Error")
-        context.error = "An error occurred while submitting your request. Please try again."
-        context.customer_name = frappe.form_dict.get('customer_name', '')
-        context.customer_email = frappe.form_dict.get('customer_email', '')
-        context.company_name = frappe.form_dict.get('company_name', '')
-        context.selected_package = frappe.form_dict.get('package', '')
-        context.request_date = frappe.form_dict.get('request_date', '')
-        context.custom_domain = frappe.form_dict.get('custom_domain', '')
-        context.notes = frappe.form_dict.get('notes', '')
+        # Log full traceback for debugging
+        frappe.log_error(
+            f"Error submitting package request: {str(e)}\n{frappe.get_traceback()}\n"
+            f"Form data: {frappe.form_dict}",
+            "Package Request Submit Error"
+        )
+        context.error = f"An error occurred while submitting your request: {str(e)}. Please try again or contact support."
+        preserve_form_data()
 
 
 def get_active_packages():
