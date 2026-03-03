@@ -29,8 +29,8 @@
                             </div>
                         </div>
                     {% else %}
-                        <form method="POST" action="">
-                            <input type="hidden" name="csrf_token" value="{{ frappe.session.csrf_token }}">
+                        <form method="POST" action="/package-request">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                             
                             <div class="row">
                                 <div class="col-md-6">

@@ -1,4 +1,5 @@
 import frappe
+import frappe.sessions
 from frappe import _
 from frappe.utils import today, now
 
@@ -8,6 +9,8 @@ def get_context(context):
     context.title = "Package Request"
     context.packages = get_active_packages()
     context.today = today()
+    # CSRF token for form submissions
+    context.csrf_token = frappe.sessions.get_csrf_token()
     
     # Add meta information
     context.meta_description = "Request a package from Ebkar Technology & Management Solutions"
@@ -172,7 +175,8 @@ def get_or_create_customer(customer_name, customer_email, company_name):
         )
         
         if customers:
-            return customers[0].name
+            # frappe.get_all with fields=["name"] returns a list of dicts
+            return customers[0]["name"]
         
         # Create new customer if not found
         customer = frappe.new_doc("Customer")
